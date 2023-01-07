@@ -55,6 +55,41 @@ def test_initialize_from_dict_error_three(version_dict: Dict[str, int]):
         model_version: Model_Version = Model_Version(version_dict)
 
 
+def test_initialize_from_string_wrong_length_error_one():
+    version_string: str = "1_0"
+
+    with pytest.raises(ValueError, match="Version string should be in the form x_y_z ex: 1_0_0"):
+        model_version: Model_Version = Model_Version(version_string)
+
+
+def test_initialize_from_string_wrong_length_error_two():
+    version_string: str = "1_0_0_0"
+
+    with pytest.raises(ValueError, match="Version string should be in the form x_y_z ex: 1_0_0"):
+        model_version: Model_Version = Model_Version(version_string)
+
+
+def test_initialize_from_string_not_integer_one():
+    version_string: str = "a_0_0"
+
+    with pytest.raises(ValueError, match="Major should be an integer and not empty, please double check your version string"):
+        model_version: Model_Version = Model_Version(version_string)
+
+
+def test_initialize_from_string_not_integer_two():
+    version_string: str = "1_a_0"
+
+    with pytest.raises(ValueError, match="Minor should be an integer and not empty, please double check your version string"):
+        model_version: Model_Version = Model_Version(version_string)
+
+
+def test_initialize_from_string_not_integer_three():
+    version_string: str = "1_0_a"
+
+    with pytest.raises(ValueError, match="Patch should be an integer and not empty, please double check your version string"):
+        model_version: Model_Version = Model_Version(version_string)
+
+
 def test_initialize_from_neither_dict_or_string():
     with pytest.raises(TypeError):
         model_version: Model_Version = Model_Version([])
