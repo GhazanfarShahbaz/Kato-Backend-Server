@@ -33,9 +33,9 @@ class Model_Version:
             version_length: int = len(version_split)
             
             if version_length != 3:
-                raise ValueError("Version string should be in the form x_y_z ex: 1_0_0")
+                raise ValueError(f"Version string should be in the form x_y_z ex: 1_0_0. Given: {version}")
             
-            version_pointers = ["major", "minor", "patch"]
+            version_pointers = ["Major", "Minor", "Patch"]
             
             for index, version_number in enumerate(version_split):
                 version_type = version_pointers[index]
@@ -43,22 +43,27 @@ class Model_Version:
                 try:
                     version_split[index] = int(version_number)
                 except:
-                    raise ValueError(f"{version_type.title()} should be an integer and not empty, please double check your version string")
+                    raise ValueError(f"{version_type} should be an integer and not empty, please double check your version string. Given: {version}")
 
                 
             self.major = version_split[0]
             self.minor = version_split[1]
             self.patch = version_split[2]
             
-        if type(version) is dict:
+        if isinstance(version, dict):
             initialize_from_dict()
-        elif type(version) is str:
+        elif isinstance(version, str):
             initialize_from_string()
         else:
-            raise TypeError("Model version must either be a string or dictionary")    
-        
-            
-            
+            raise TypeError(f"Model version must either be a string or dictionary not {type(version)}")    
+    
+    def convertToDict(self) -> Dict[str, int]:
+        return {
+            "major": self.major,
+            "minor": self.minor,
+            "patch": self.patch
+        }    
+
     def __str__(self) -> str:
         return f"{self.major}_{self.minor}_{self.patch}"
 
@@ -79,20 +84,20 @@ class Model_Version:
         return self.major == other_version.major and self.minor == other_version.minor and self.patch == other_version.patch
 
 
-# class Model_Handler:    
-#     def __init__(self):
-#         self.available_versions: List[Model_Version] = self._get_available_model_list()
-#         self.model_generator_params: Dict[str, Callable] = {
-#             "major": self._get_next_major_version,
-#             "minor": self._get_next_minor_version,
-#             "patch": self._get_next_patch_version
-#         }
+class Model_Handler: 
+    def __init__(self):
+        self.available_versions: List[Model_Version] = self._get_available_model_list()
+        self.model_generator_params: Dict[str, Callable] = {
+            "major": self._get_next_major_version,
+            "minor": self._get_next_minor_version,
+            "patch": self._get_next_patch_version
+        }
 
-#     def get_latest_model_version(self) -> Model_Version:
-#         latest_version: Model_Version = heapq.heappop(self.available_versions)
-#         heapq.heappush(self.available_versions, latest_version)
+    def get_latest_model_version(self) -> Model_Version:
+        latest_version: Model_Version = heapq.heappop(self.available_versions)
+        heapq.heappush(self.available_versions, latest_version)
 
-#         return latest_version
+        return latest_version
 
 #     def get_model(model_version: Model_Version) -> Any:
 #         model_version_string: str = str(model_version)
@@ -214,35 +219,44 @@ class Model_Version:
         
 #         data_file.close
         
-#     def _get_available_model_list(self) -> List[Model_Version]:
-#         model_versions: List[Model_Version] = []
+    def _get_available_model_list(self) -> List[Model_Version]:
+        model_versions: List[Model_Version] = []
 
-#         for file_name in os.listdir(MODEL_DIRECTORY):
-#             if file_name[:5] == "model":
-#                 model_versions.append(self._extract_model_version(file_name))
+        for file_name in os.listdir(MODEL_DIRECTORY):
+            if file_name[:5] == "model":
+                model_versions.append(self._extract_model_version(file_name))
 
-#         heapq._heapify_max(model_versions)
+        heapq._heapify_max(model_versions)
 
-#         return model_versions
+        return model_versions
 
-#     def _extract_model_version(file_name: str) -> Model_Version:
-#         version_string: str = file_name[9:]
+    def _extract_model_version(self, file_name: str) -> Model_Version:
+        version_string: str = file_name[6:]
 
-#         return Model_Version(version_string=version_string)
+        return Model_Version(version=version_string)
     
-#     def _get_next_major_version(self) -> Model_Version:
-#         latest_version: Model_Version = self.get_latest_model_version()
+    def _get_next_major_version(self) -> Model_Version:
+        latest_version_dict: Dict[str, int] = self.get_latest_model_version().convertToDict()
         
-#         return Model_Version(major = latest_version.major + 1, minor = 0, patch = 0)
+        latest_version_dict["major"] += 1
+        latest_version_dict["minor"] = 0
+        latest_version_dict["patch"] = 0
+        
+        return Model_Version(latest_version_dict)
     
-#     def _get_next_minor_version(self) -> Model_Version:
-#         latest_version: Model_Version = self.get_latest_model_version()
+    def _get_next_minor_version(self) -> Model_Version:
+        latest_version_dict: Dict[str, int] = self.get_latest_model_version().convertToDict()
         
-#         return Model_Version(major = latest_version.major, minor = latest_version.minor + 1, patch = 0)
+        latest_version_dict["minor"] += 1
+        latest_version_dict["patch"] = 0
+        
+        return Model_Version(latest_version_dict)
     
-#     def _get_next_patch_version(self) -> Model_Version:
-#         latest_version: Model_Version = self.get_latest_model_version()
+    def _get_next_patch_version(self) -> Model_Version:
+        latest_version_dict: Dict[str, int] = self.get_latest_model_version().convertToDict()
         
-#         return Model_Version(major = latest_version.major, minor = latest_version.minor, patch = latest_version.patch + 1)
+        latest_version_dict["patch"] += 1
+        
+        return Model_Version(latest_version_dict)
 
 
