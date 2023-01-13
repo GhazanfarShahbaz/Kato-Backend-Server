@@ -1,6 +1,5 @@
 from kato_chat_bot.model.model import Model_Handler, Model_Version
 from typing import Dict, List, Callable
-from unittest import mock
 from unittest.mock import patch, MagicMock
 from copy import copy
 
@@ -33,6 +32,22 @@ def fixture_version_dict() -> Dict[str, int]:
 @pytest.fixture
 def fixture_model_file_name() -> str:
     return "model_1_0_0"
+
+
+@pytest.fixture
+def fixture_model_directory_files() -> List[str]:
+    return ["model_1_0_0", "model_1_0_1"]
+
+
+@patch("kato_chat_bot.model.model.listdir")
+def test_get_available_model_list(listDirFunction, fixture_model_directory_files):
+    listDirFunction.return_value = fixture_model_directory_files
+    model_handler = Model_Handler()
+    
+    model_list: List[Model_Version] = model_handler._get_available_model_list()
+    assert len(model_list) == 2
+    assert Model_Version("1_0_0") in model_list
+    assert Model_Version("1_0_1") in model_list
 
 
 @patch.object(Model_Handler, "_get_available_model_list")
@@ -99,5 +114,8 @@ def test_extract_model_version(fixture_available_versions, fixture_model_file_na
     Model_Handler._get_available_model_list.return_value = fixture_available_versions
     model_handler = Model_Handler()
 
-    assert model_handler._extract_model_version(
-        fixture_model_file_name) == Model_Version("1_0_0")
+    assert model_handler._extract_model_version(fixture_model_file_name) == Model_Version("1_0_0")
+
+
+    
+    
