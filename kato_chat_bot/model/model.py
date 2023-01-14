@@ -1,24 +1,27 @@
 
 import heapq
-import json
 import random
+import numpy as np
+import tensorflow as tf
 
 from typing import List, Any, Dict, Callable, Set
 from ctypes import cast, py_object
 from os import listdir
 
-# from tensorflow.keras import Sequential
-# from tensorflow.keras.layers import Dense, Dropout
-# from tensorflow.keras.models import load_model
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.models import load_model
 
-# from nltk import download, word_tokenize
-# from nltk.stem import WordNetLemmatizer
+from nltk import download, word_tokenize
+from nltk.stem import WordNetLemmatizer
 
-# from model_settings.settings import PACKAGES
+from kato_chat_bot.model_settings.settings import Packages
 
 
 MODEL_DIRECTORY: str = "saved_models"
 
+from warnings import filterwarnings
+filterwarnings(action='ignore', category=DeprecationWarning, message='`np.bool` is a deprecated alias')
 
 class Model_Version:
     def __init__(self, version: dict or str):
@@ -105,124 +108,124 @@ class Model_Handler:
 
         return latest_version
 
-#     def get_model(model_version: Model_Version) -> Any:
-#         model_version_string: str = str(model_version)
+    def get_model(model_version: Model_Version) -> Any:
+        model_version_string: str = str(model_version)
 
-#         return load_model(f"saved_model/model_v_{model_version_string}")
+        return load_model(f"saved_model/model_v_{model_version_string}")
 
-#     def model_version_exists(self, version: Model_Version) -> bool:
-#         return version in self.available_versions
-
-
-#     def create_and_save_model(self, version_param: str, intents: dict, patterns: dict, function_mapper_file) -> None:
-#         version: Model_Version = self.model_generator_params[version_param]()
-
-#         if not self._download_packages():
-#             return
-
-#         intent_data = self._process_intents(intents)
-
-#         classes, words, document = intent_data["classes"], intent_data["words"], intent_data["document"]
+    def model_version_exists(self, version: Model_Version) -> bool:
+        return version in self.available_versions
 
 
-#     # PRIVATE FUNCTIONS START HERE
-#     def _download_packages() -> bool:
-#         package_count: int = len(PACKAGES)
+    def create_and_save_model(self, version_param: str, intents: dict, patterns: dict, function_mapper_file) -> None:
+        version: Model_Version = self.model_generator_params[version_param]()
 
-#         for i, package in enumerate(PACKAGES):
-#             try:
-#                 download(package, quiet=True)
-#                 print(f"{i+1}/{package_count}: Downloaded {package}")
-#             except:
-#                 print(f"Could not download {package}")
-#                 return False
+        if not self._download_packages():
+            return
 
-#         print("Downloaded all packages")
-#         return True
+        intent_data = self._process_intents(intents)
 
-#     def _process_intents(intents: dict) -> dict:
-#         lemmatizer = WordNetLemmatizer()
-
-#         classes: Set[str] = set()
-#         words: Set[str] = set()
-#         doc_x, doc_y = [], []
-
-#         for intent in intents["intents"]:
-#             for pattern in intent["patterns"]:
-#                 tokens: List[str] = word_tokenize(pattern) #extract words from each pattern
-#                 tokens = [lemmatizer.lemmatize(token.lower()) for token in tokens]
-
-#                 words.update(tokens)
-
-#                 doc_x.append(pattern)
-#                 doc_y.append(intent["tag"])
-
-#             classes.add(intent["tag"])
-
-#         return {
-#             "classes"   : sorted(classes),
-#             "words"     : sorted(words),
-#             "document"  : {
-#                 "x": doc_x,
-#                 "y": doc_y
-#             }
-#         }
-
-#     def _create_model(classes: str, words: str, documents: Dict[str, List[str]]) -> any:
-#         document_x, document_y = documents["x"], documents["y"]
-#         lemmatizer = WordNetLemmatizer()
-
-#         training_data = []
-#         out_empty: List[int] = [0] * len(classes)
-
-#         for index, document in enumerate(document_x):
-#             bag_of_words = []
-#             text = lemmatizer.lemmatize(document.lower())
-
-#             for word in words:
-#                 bag_of_words.append(1) if word in text else bag_of_words.append(0)
-
-#             output_row = list(out_empty)
-#             output_row[classes.index(document_y[index])] = 1
-#             training_data.append([bag_of_words, output_row])
+        classes, words, document = intent_data["classes"], intent_data["words"], intent_data["document"]
 
 
-#             random.shuffle(training_data)
-#             training_data = np.array(training_data, dtype = object)
+    # PRIVATE FUNCTIONS START HERE
+    def _download_packages() -> bool:
+        package_count: int = len(PACKAGES)
 
-#             x = np.array(list(training_data[:, 0])) # first training phase
-#             y = np.array(list(training_data[:, 1])) # second training phase
+        for i, package in enumerate(PACKAGES):
+            try:
+                download(package, quiet=True)
+                print(f"{i+1}/{package_count}: Downloaded {package}")
+            except:
+                print(f"Could not download {package}")
+                return False
 
-#             i_shape = (len(x[0]), )
-#             o_shape = len(y[0])
+        print("Downloaded all packages")
+        return True
 
-#             model = Sequential()
-#             model.add(Dense(128, input_shape = i_shape, activation = "relu"))
-#             model.add(Dropout(0.5))
+    def _process_intents(intents: dict) -> dict:
+        lemmatizer = WordNetLemmatizer()
 
-#             model.add(Dense(64, activation = "relu"))
-#             model.add(Dropout(0.3))
-#             model.add(Dense(o_shape, activation = "softmax"))
+        classes: Set[str] = set()
+        words: Set[str] = set()
+        doc_x, doc_y = [], []
 
-#             md = tf.keras.optimizers.Adam(learning_rate = 0.01, decay = 1e-6)
+        for intent in intents["intents"]:
+            for pattern in intent["patterns"]:
+                tokens: List[str] = word_tokenize(pattern) #extract words from each pattern
+                tokens = [lemmatizer.lemmatize(token.lower()) for token in tokens]
 
-#             model.compile(
-#                 loss        = 'categorical_crossentropy',
-#                 optimizer   = md,
-#                 metrics     = ["accuracy"]
-#             )
+                words.update(tokens)
 
-#             model.fit(x, y, epochs = 1000, verbose = 1)
+                doc_x.append(pattern)
+                doc_y.append(intent["tag"])
 
-#         return model
+            classes.add(intent["tag"])
 
-#     def _save_model_misc(data: any, file_name: str) -> None:
-#         data_file = open(file_name, "w")
+        return {
+            "classes"   : sorted(classes),
+            "words"     : sorted(words),
+            "document"  : {
+                "x": doc_x,
+                "y": doc_y
+            }
+        }
 
-#         for element in data:
-#             data_file.write(element + "\n")
+    def _create_model(classes: str, words: str, documents: Dict[str, List[str]]) -> any:
+        document_x, document_y = documents["x"], documents["y"]
+        lemmatizer = WordNetLemmatizer()
 
-#         data_file.close
+        training_data = []
+        out_empty: List[int] = [0] * len(classes)
+
+        for index, document in enumerate(document_x):
+            bag_of_words = []
+            text = lemmatizer.lemmatize(document.lower())
+
+            for word in words:
+                bag_of_words.append(1) if word in text else bag_of_words.append(0)
+
+            output_row = list(out_empty)
+            output_row[classes.index(document_y[index])] = 1
+            training_data.append([bag_of_words, output_row])
+
+
+            random.shuffle(training_data)
+            training_data = np.array(training_data, dtype = object)
+
+            x = np.array(list(training_data[:, 0])) # first training phase
+            y = np.array(list(training_data[:, 1])) # second training phase
+
+            i_shape = (len(x[0]), )
+            o_shape = len(y[0])
+
+            model = Sequential()
+            model.add(Dense(128, input_shape = i_shape, activation = "relu"))
+            model.add(Dropout(0.5))
+
+            model.add(Dense(64, activation = "relu"))
+            model.add(Dropout(0.3))
+            model.add(Dense(o_shape, activation = "softmax"))
+
+            md = tf.keras.optimizers.Adam(learning_rate = 0.01, decay = 1e-6)
+
+            model.compile(
+                loss        = 'categorical_crossentropy',
+                optimizer   = md,
+                metrics     = ["accuracy"]
+            )
+
+            model.fit(x, y, epochs = 1000, verbose = 1)
+
+        return model
+
+    def _save_model_misc(data: any, file_name: str) -> None:
+        data_file = open(file_name, "w")
+
+        for element in data:
+            data_file.write(element + "\n")
+
+        data_file.close
 
     def _get_available_model_list(self) -> List[Model_Version]:
         model_versions: List[Model_Version] = []

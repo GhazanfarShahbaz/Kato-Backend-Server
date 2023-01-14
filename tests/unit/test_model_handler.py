@@ -117,5 +117,3 @@ def test_extract_model_version(fixture_available_versions, fixture_model_file_na
     assert model_handler._extract_model_version(fixture_model_file_name) == Model_Version("1_0_0")
 
 
-    
-    
