@@ -15,7 +15,7 @@ from tensorflow.keras.models import load_model
 from nltk import download, word_tokenize
 from nltk.stem import WordNetLemmatizer
 
-from kato_chat_bot.model_settings.settings import Packages
+from kato_chat_bot.model.model_settings.settings import PACKAGES
 
 
 MODEL_DIRECTORY: str = "saved_models"
