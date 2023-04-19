@@ -5,8 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from typing import List, Any, Dict, Callable, Set
-from ctypes import cast, py_object
-from os import listdir, getcwd
+from os import listdir
 from os.path import join, abspath, dirname
 
 from tensorflow.keras import Sequential
