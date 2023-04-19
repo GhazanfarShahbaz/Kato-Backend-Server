@@ -6,7 +6,8 @@ import tensorflow as tf
 
 from typing import List, Any, Dict, Callable, Set
 from ctypes import cast, py_object
-from os import listdir
+from os import listdir, getcwd
+from os.path import join, abspath, dirname
 
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense, Dropout
@@ -17,8 +18,8 @@ from nltk.stem import WordNetLemmatizer
 
 from kato_chat_bot.model.model_settings.settings import PACKAGES
 
-
-MODEL_DIRECTORY: str = "saved_models"
+CURRENT_DIRECTORY = dirname(abspath(__file__))
+MODEL_DIRECTORY: str = join(CURRENT_DIRECTORY, "saved_models")
 
 from warnings import filterwarnings
 filterwarnings(action='ignore', category=DeprecationWarning, message='`np.bool` is a deprecated alias')
@@ -117,8 +118,11 @@ class Model_Handler:
         return version in self.available_versions
 
 
-    def create_and_save_model(self, version_param: str, intents: dict, patterns: dict, function_mapper_file) -> None:
-        version: Model_Version = self.model_generator_params[version_param]()
+    def create_and_save_model(self, version_param: str, intents: dict, function_mapper_file: any) -> None:
+        version: Model_Version = Model_Version(version_param)
+        
+        if self.model_version_exists(version):
+            return 
 
         if not self._download_packages():
             return
@@ -126,10 +130,17 @@ class Model_Handler:
         intent_data = self._process_intents(intents)
 
         classes, words, document = intent_data["classes"], intent_data["words"], intent_data["document"]
+        
+        model = self._create_model(classes, words, document)
+        
+        model.save(f"{MODEL_DIRECTORY}/{str(version)}/model")
+        
+        self._save_model_misc(intent_data["classes"], f'{MODEL_DIRECTORY}/{str(version)}/classes.txt')
+        self._save_model_misc(intent_data["words"], f'{MODEL_DIRECTORY}/{str(version)}/words.txt')
 
 
     # PRIVATE FUNCTIONS START HERE
-    def _download_packages() -> bool:
+    def _download_packages(self) -> bool:
         package_count: int = len(PACKAGES)
 
         for i, package in enumerate(PACKAGES):
@@ -143,7 +154,7 @@ class Model_Handler:
         print("Downloaded all packages")
         return True
 
-    def _process_intents(intents: dict) -> dict:
+    def _process_intents(self, intents: dict) -> dict:
         lemmatizer = WordNetLemmatizer()
 
         classes: Set[str] = set()
@@ -171,7 +182,7 @@ class Model_Handler:
             }
         }
 
-    def _create_model(classes: str, words: str, documents: Dict[str, List[str]]) -> any:
+    def _create_model(self, classes: str, words: str, documents: Dict[str, List[str]]) -> any:
         document_x, document_y = documents["x"], documents["y"]
         lemmatizer = WordNetLemmatizer()
 
@@ -190,36 +201,42 @@ class Model_Handler:
             training_data.append([bag_of_words, output_row])
 
 
-            random.shuffle(training_data)
-            training_data = np.array(training_data, dtype = object)
+        random.shuffle(training_data)
+        training_data = np.array(training_data, dtype = object)
 
-            x = np.array(list(training_data[:, 0])) # first training phase
-            y = np.array(list(training_data[:, 1])) # second training phase
+        x = np.array(list(training_data[:, 0])) # first training phase
+        y = np.array(list(training_data[:, 1])) # second training phase
 
-            i_shape = (len(x[0]), )
-            o_shape = len(y[0])
+        i_shape = (len(x[0]), )
+        o_shape = len(y[0])
 
-            model = Sequential()
-            model.add(Dense(128, input_shape = i_shape, activation = "relu"))
-            model.add(Dropout(0.5))
+        model = Sequential()
+        model.add(Dense(128, input_shape = i_shape, activation = "relu"))
+        model.add(Dropout(0.5))
 
-            model.add(Dense(64, activation = "relu"))
-            model.add(Dropout(0.3))
-            model.add(Dense(o_shape, activation = "softmax"))
+        model.add(Dense(64, activation = "relu"))
+        model.add(Dropout(0.3))
+        model.add(Dense(o_shape, activation = "softmax"))
+        
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+            initial_learning_rate=0.01,
+            decay_steps=10000,
+            decay_rate=1e-6
+        )
 
-            md = tf.keras.optimizers.Adam(learning_rate = 0.01, decay = 1e-6)
+        optimizer = tf.keras.optimizers.Adam(learning_rate = lr_schedule)
 
-            model.compile(
-                loss        = 'categorical_crossentropy',
-                optimizer   = md,
-                metrics     = ["accuracy"]
-            )
+        model.compile(
+            loss        = 'categorical_crossentropy',
+            optimizer   = optimizer,
+            metrics     = ["accuracy"]
+        )
 
-            model.fit(x, y, epochs = 1000, verbose = 1)
+        model.fit(x, y, epochs = 1000, verbose = 1)
 
         return model
 
-    def _save_model_misc(data: any, file_name: str) -> None:
+    def _save_model_misc(self, data: any, file_name: str) -> None:
         data_file = open(file_name, "w")
 
         for element in data:
@@ -269,3 +286,4 @@ class Model_Handler:
         latest_version_dict["patch"] += 1
 
         return Model_Version(latest_version_dict)
+
