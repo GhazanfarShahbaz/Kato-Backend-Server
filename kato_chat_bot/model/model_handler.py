@@ -71,6 +71,10 @@ class Model_Handler:
         self._save_model_misc(intent_data["words"], f'{MODEL_DIRECTORY}/{str(version)}/words.txt')
 
 
+    def load_model(self, version: Model_Version) -> Any:
+        return load_model(f"{MODEL_DIRECTORY}/{str(version)}/model")
+
+
     # PRIVATE FUNCTIONS START HERE
     def _download_packages(self) -> bool:
         package_count: int = len(PACKAGES)
