@@ -1,10 +1,12 @@
-
 import heapq
 import random
 import numpy as np
 import tensorflow as tf
 
-from typing import List, Any, Dict, Callable, Set
+from typing import List, Any, Dict, Callable, Set, Tuple
+
+import importlib.util  
+
 from os import listdir
 from os.path import join, abspath, dirname
 
@@ -13,7 +15,11 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import load_model
 
 from nltk import download, word_tokenize
-from nltk.stem import WordNetLemmatizer
+from nltk.stem import WordNetLemmatizer\
+    
+from json import load
+
+from numpy import ndarray
 
 from warnings import filterwarnings
 
@@ -69,10 +75,32 @@ class Model_Handler:
         
         self._save_model_misc(intent_data["classes"], f'{MODEL_DIRECTORY}/{str(version)}/classes.txt')
         self._save_model_misc(intent_data["words"], f'{MODEL_DIRECTORY}/{str(version)}/words.txt')
+        self._save_model_misc(intents, f'{MODEL_DIRECTORY}/{str(version)}/intents.json')
 
 
-    def load_model(self, version: Model_Version) -> Any:
-        return load_model(f"{MODEL_DIRECTORY}/{str(version)}/model")
+    def load_model_and_misc(self, version: Model_Version) -> tuple:
+        intents: dict = self._load_intents(version)
+        classes: List[str] = self._load_model_misc(version, "classes.txt")
+        words: List[str] = self._load_model_misc(version, "words.txt")
+                
+        return load_model(f"{MODEL_DIRECTORY}/{str(version)}/model"), intents, classes, words
+    
+    
+    def get_result_from_input(self, user_input: str, model: any, intents: dict, classes: List[str], words: List[str], version: Model_Version) -> str:
+        response: List[str] = self._get_model_response(model, user_input, words, classes)
+        intent = self._get_result(response, intents)
+        
+        if intent == "NO INTENT FOUND":
+            return "Sorry, I do not know how to respond to that."
+        
+        # get the functin mapper for this version
+        function_mapper_file_spec = importlib.util.spec_from_file_location("function_mapper", f"{MODEL_DIRECTORY}/{str(version)}/function_mapper.py")
+        function_mapper_lib = importlib.util.module_from_spec(function_mapper_file_spec)
+        
+        function_mapper_file_spec.loader.exec_module(function_mapper_lib)
+
+        print(function_mapper_lib)
+        return function_mapper_lib.map_function(user_input, intent)
 
 
     # PRIVATE FUNCTIONS START HERE
@@ -179,6 +207,24 @@ class Model_Handler:
             data_file.write(element + "\n")
 
         data_file.close
+        
+    def _load_model_misc(self, version: Model_Version, file_name: str) -> List[str]:
+        data: List[str] = []
+
+        with open(f"{MODEL_DIRECTORY}/{str(version)}/{file_name}", "r") as file:
+            for line in file:
+                data.append(line.strip())
+
+        return data
+    
+    
+    def _load_intents(self, version: Model_Version) -> dict:
+        data = {}
+
+        with open(f"{MODEL_DIRECTORY}/{str(version)}/intents.json", "r") as file:
+            data = load(file)
+            
+        return data
 
     def _get_available_model_list(self) -> List[Model_Version]:
         model_versions: List[Model_Version] = []
@@ -222,4 +268,51 @@ class Model_Handler:
         latest_version_dict["patch"] += 1
 
         return Model_Version(latest_version_dict)
+    
+    
+    def _get_model_response(self, model: any, user_input: str, words: List[str], classes: List[str]) -> List[str]:
+        bag_of_words: ndarray = self._get_word_bag(user_input, words)
+        result: ndarray = model.predict(np.array([bag_of_words]))[0]
+        threshold: float = 0.2
+        result_list: List[List[float]] = [[index, res] for index, res in enumerate(result) if res > threshold]
 
+        result_list.sort(key=lambda x: x[1], reverse=True)
+        updated_result_list: List[float] = []
+
+        for result in result_list:
+            updated_result_list.append(classes[result[0]])
+
+        return updated_result_list
+
+
+    def _get_word_bag(self, user_input: str, words: List[str]) -> ndarray:
+        tokens: List[str] = self._tokenize_input(user_input)
+        bag_of_words: List[int] = [0] * len(words)
+
+        for w in tokens:
+            for index, word in enumerate(words):
+                if word == w:
+                    bag_of_words[index] = 1
+
+        return np.array(bag_of_words)
+
+
+    def _tokenize_input(self, user_input: str) -> List[str]:
+        LEMMATIZER = WordNetLemmatizer()
+
+        tokens: List[str] = word_tokenize(user_input)
+        tokens: List[str] = [LEMMATIZER.lemmatize(token) for token in tokens]
+
+        return tokens
+    
+    
+    def _get_result(self, response: List[str], intents: Dict[str, List[Dict[str, any]]]) -> Dict[str, any]:
+        tag: str = response[0]
+
+        list_of_intents: List[Dict[str, any]] = intents["intents"]
+        
+        for intent in list_of_intents:
+            if intent["tag"] == tag:
+                return intent
+            
+        return "NO INTENT FOUND"
