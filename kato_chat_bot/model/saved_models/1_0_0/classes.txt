@@ -1,0 +1,7 @@
+age
+birthday
+date
+good_night
+greet
+parting
+time_1
