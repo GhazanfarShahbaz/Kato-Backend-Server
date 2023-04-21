@@ -1,4 +1,4 @@
-from kato_chat_bot.model.model import Model_Handler, Model_Version
+from kato_chat_bot.model.model_handler import Model_Handler, Model_Version
 from typing import Dict, List, Callable
 from unittest.mock import patch, MagicMock
 from copy import copy
@@ -39,7 +39,7 @@ def fixture_model_directory_files() -> List[str]:
     return ["model_1_0_0", "model_1_0_1"]
 
 
-@patch("kato_chat_bot.model.model.listdir")
+@patch("kato_chat_bot.model.model_handler.listdir")
 def test_get_available_model_list(listDirFunction, fixture_model_directory_files):
     listDirFunction.return_value = fixture_model_directory_files
     model_handler = Model_Handler()
