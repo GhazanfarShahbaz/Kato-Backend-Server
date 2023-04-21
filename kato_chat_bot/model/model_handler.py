@@ -15,7 +15,7 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import load_model
 
 from nltk import download, word_tokenize
-from nltk.stem import WordNetLemmatizer\
+from nltk.stem import WordNetLemmatizer
     
 from json import load
 
