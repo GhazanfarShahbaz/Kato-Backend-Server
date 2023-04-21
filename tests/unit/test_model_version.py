@@ -1,4 +1,4 @@
-from kato_chat_bot.model.model import Model_Version
+from kato_chat_bot.model.model_version import Model_Version
 from typing import Dict
 
 import pytest
