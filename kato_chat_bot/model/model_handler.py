@@ -56,7 +56,7 @@ class Model_Handler:
         return version in self.available_versions
 
 
-    def create_and_save_model(self, version_param: str, intents: dict, function_mapper_file: any) -> None:
+    def create_and_save_model(self, version_param: str, intents: dict, function_mapper_file_bytes: any) -> None:
         version: Model_Version = Model_Version(version_param)
         
         if self.model_version_exists(version):
@@ -71,11 +71,16 @@ class Model_Handler:
         
         model = self._create_model(classes, words, document)
         
-        model.save(f"{MODEL_DIRECTORY}/{str(version)}/model")
+        model_path: str = f'{MODEL_DIRECTORY}/{str(version)}'
         
-        self._save_model_misc(intent_data["classes"], f'{MODEL_DIRECTORY}/{str(version)}/classes.txt')
-        self._save_model_misc(intent_data["words"], f'{MODEL_DIRECTORY}/{str(version)}/words.txt')
-        self._save_model_misc(intents, f'{MODEL_DIRECTORY}/{str(version)}/intents.json')
+        model.save(f"{model_path}/model")
+        
+        self._save_model_misc(intent_data["classes"], f'{model_path}/classes.txt')
+        self._save_model_misc(intent_data["words"], f'{model_path}/words.txt')
+        self._save_model_misc(intents, f'{model_path}/intents.json')
+                
+        with open(f'{model_path}/function_mapper.py', "wb") as binary_file:     
+            binary_file.write(function_mapper_file_bytes)
 
 
     def load_model_and_misc(self, version: Model_Version) -> tuple:
@@ -124,7 +129,7 @@ class Model_Handler:
         classes: Set[str] = set()
         words: Set[str] = set()
         doc_x, doc_y = [], []
-
+        
         for intent in intents["intents"]:
             for pattern in intent["patterns"]:
                 tokens: List[str] = word_tokenize(pattern) #extract words from each pattern
