@@ -14,7 +14,6 @@ class Model_Resource:
         request_json = {}
         
         for part in form:
-            print(part.name)
             if part.name == "file":
                 function_mapper_file_bytes = part.stream.read()
             
