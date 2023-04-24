@@ -1,3 +1,6 @@
-import falcon
+import sys
+from os import path
 
-app = application = falcon.App()
+sys.path.append('../')
+
+import kato_chat_bot
