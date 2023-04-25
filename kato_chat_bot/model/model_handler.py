@@ -1,11 +1,18 @@
+# full imports
 import heapq
-import random
 import numpy as np
+import random
 import tensorflow as tf
 
-from typing import List, Any, Dict, Callable, Set, Tuple
+# from imports
+from importlib import util 
 
-import importlib.util  
+from json import load
+
+from numpy import ndarray
+
+from nltk import download, word_tokenize
+from nltk.stem import WordNetLemmatizer
 
 from os import listdir
 from os.path import join, abspath, dirname
@@ -14,15 +21,11 @@ from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import load_model
 
-from nltk import download, word_tokenize
-from nltk.stem import WordNetLemmatizer
-    
-from json import load
-
-from numpy import ndarray
+from typing import List, Any, Dict, Callable, Set
 
 from warnings import filterwarnings
 
+# local imports
 from kato_chat_bot.model.model_version import Model_Version
 from kato_chat_bot.model.model_settings.settings import PACKAGES
 
@@ -99,8 +102,8 @@ class Model_Handler:
             return "Sorry, I do not know how to respond to that."
         
         # get the functin mapper for this version
-        function_mapper_file_spec = importlib.util.spec_from_file_location("function_mapper", f"{MODEL_DIRECTORY}/{str(version)}/function_mapper.py")
-        function_mapper_lib = importlib.util.module_from_spec(function_mapper_file_spec)
+        function_mapper_file_spec = util.spec_from_file_location("function_mapper", f"{MODEL_DIRECTORY}/{str(version)}/function_mapper.py")
+        function_mapper_lib = util.module_from_spec(function_mapper_file_spec)
         
         function_mapper_file_spec.loader.exec_module(function_mapper_lib)
 
